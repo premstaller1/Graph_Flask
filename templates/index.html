@@ -1,87 +1,86 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Instagram Insights</title>
-</head>
-<body>
-    <h1>Instagram Insights</h1>
-    <form id="insights-form" method="post" action="/fetch">
-        <label for="template">Choose a Template:</label>
-        <select id="template" name="template">
-            <option value="">Select a Template</option>
-            {% for key, template in templates.items() %}
-                <option value="{{ key }}">{{ key }}</option>
-            {% endfor %}
+{% extends "base.html" %}
+
+{% block content %}
+<section>
+    <form id="metrics-form">
+        <label for="profile">Select Profile:</label>
+        <select name="profile" id="profile">
+            <option value="productminimal">Product Minimal</option>
+            <option value="productsdesign">Products Design</option>
         </select>
 
-        <label for="profile">Profile:</label>
-        <select id="profile" name="profile">
-            {% for profile in profiles %}
-                <option value="{{ profile }}">{{ profile }}</option>
-            {% endfor %}
+        <label for="metric">Select Metric:</label>
+        <select name="metric" id="metric">
+            <option value="engaged_audience_demographics,reached_audience_demographics">Demographics</option>
         </select>
 
-        <label for="metric">Metric:</label>
-        <select id="metric" name="metric">
-            {% for metric in metrics %}
-                <option value="{{ metric }}">{{ metric }}</option>
-            {% endfor %}
+        <label for="breakdown">Select Breakdown:</label>
+        <select name="breakdown" id="breakdown">
+            <option value="age">Age</option>
+            <option value="gender">Gender</option>
+            <option value="city">City</option>
+            <option value="country">Country</option>
         </select>
-
-        <label for="period">Period:</label>
-        <select id="period" name="period"></select>
-
-        <label for="breakdown">Breakdown:</label>
-        <select id="breakdown" name="breakdown">
-            <option value="">None</option>
-            {% for breakdown in breakdowns %}
-                <option value="{{ breakdown }}">{{ breakdown }}</option>
-            {% endfor %}
-        </select>
-
-        <label for="since">Since:</label>
-        <input type="date" id="since" name="since">
-
-        <label for="until">Until:</label>
-        <input type="date" id="until" name="until">
 
         <button type="submit">Fetch Data</button>
     </form>
+</section>
 
-    <script>
-        const templates = {{ templates | tojson }};
-        const metrics = {{ metrics | tojson }};
+<section id="results">
+    <div id="chart-container">
+        <!-- Chart will be rendered here -->
+    </div>
+</section>
 
-        document.getElementById("template").addEventListener("change", function () {
-            const selectedTemplate = this.value;
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+    document.getElementById('metrics-form').addEventListener('submit', function (e) {
+        e.preventDefault();
 
-            if (selectedTemplate && templates[selectedTemplate]) {
-                const template = templates[selectedTemplate];
-                document.getElementById("profile").value = template.profile || "";
-                document.getElementById("metric").value = template.metric || "";
-                document.getElementById("period").value = template.period || "";
-                document.getElementById("breakdown").value = template.breakdown || "";
-                document.getElementById("since").value = template.since || "";
-                document.getElementById("until").value = template.until || "";
-            }
-        });
+        const formData = new FormData(e.target);
 
-        document.getElementById("metric").addEventListener("change", function () {
-            const selectedMetric = this.value;
-            const periodDropdown = document.getElementById("period");
+        fetch('/fetch_data', {
+            method: 'POST',
+            body: formData,
+        })
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.error) {
+                    document.getElementById('chart-container').innerHTML = `<p>Error: ${data.error}</p>`;
+                    return;
+                }
 
-            periodDropdown.innerHTML = ""; // Clear existing options
-            if (metrics[selectedMetric]) {
-                metrics[selectedMetric].periods.forEach(period => {
-                    const option = document.createElement("option");
-                    option.value = period;
-                    option.textContent = period;
-                    periodDropdown.appendChild(option);
-                });
-            }
-        });
-    </script>
-</body>
-</html>
+                visualizeData(data);
+            })
+            .catch((error) => {
+                document.getElementById('chart-container').innerHTML = `<p>Error: ${error}</p>`;
+            });
+    });
+
+    function visualizeData(data) {
+        // Ensure data structure is as expected
+        const labels = data['Dimension Value'] || [];
+        const values = data['Value'] || [];
+
+        if (!labels.length || !values.length) {
+            document.getElementById('chart-container').innerHTML = `<p>No data available for visualization.</p>`;
+            return;
+        }
+
+        // Prepare Plotly trace
+        const trace = {
+            x: labels,
+            y: values,
+            type: 'bar',
+        };
+
+        const layout = {
+            title: 'Metric Visualization',
+            xaxis: { title: 'Dimension Value' },
+            yaxis: { title: 'Value' },
+        };
+
+        Plotly.newPlot('chart-container', [trace], layout);
+    }
+</script>
+{% endblock %}
