@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instagram Insights</title>
+</head>
+<body>
+    <h1>Instagram Insights</h1>
+    <form id="insights-form" method="post" action="/fetch">
+        <label for="template">Choose a Template:</label>
+        <select id="template" name="template">
+            <option value="">Select a Template</option>
+            {% for key, template in templates.items() %}
+                <option value="{{ key }}">{{ key }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="profile">Profile:</label>
+        <select id="profile" name="profile">
+            {% for profile in profiles %}
+                <option value="{{ profile }}">{{ profile }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="metric">Metric:</label>
+        <select id="metric" name="metric">
+            {% for metric in metrics %}
+                <option value="{{ metric }}">{{ metric }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="period">Period:</label>
+        <select id="period" name="period"></select>
+
+        <label for="breakdown">Breakdown:</label>
+        <select id="breakdown" name="breakdown">
+            <option value="">None</option>
+            {% for breakdown in breakdowns %}
+                <option value="{{ breakdown }}">{{ breakdown }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="since">Since:</label>
+        <input type="date" id="since" name="since">
+
+        <label for="until">Until:</label>
+        <input type="date" id="until" name="until">
+
+        <button type="submit">Fetch Data</button>
+    </form>
+
+    <script>
+        const templates = {{ templates | tojson }};
+        const metrics = {{ metrics | tojson }};
+
+        document.getElementById("template").addEventListener("change", function () {
+            const selectedTemplate = this.value;
+
+            if (selectedTemplate && templates[selectedTemplate]) {
+                const template = templates[selectedTemplate];
+                document.getElementById("profile").value = template.profile || "";
+                document.getElementById("metric").value = template.metric || "";
+                document.getElementById("period").value = template.period || "";
+                document.getElementById("breakdown").value = template.breakdown || "";
+                document.getElementById("since").value = template.since || "";
+                document.getElementById("until").value = template.until || "";
+            }
+        });
+
+        document.getElementById("metric").addEventListener("change", function () {
+            const selectedMetric = this.value;
+            const periodDropdown = document.getElementById("period");
+
+            periodDropdown.innerHTML = ""; // Clear existing options
+            if (metrics[selectedMetric]) {
+                metrics[selectedMetric].periods.forEach(period => {
+                    const option = document.createElement("option");
+                    option.value = period;
+                    option.textContent = period;
+                    periodDropdown.appendChild(option);
+                });
+            }
+        });
+    </script>
+</body>
+</html>
